@@ -1,0 +1,23 @@
+{
+  "name": "distributed_processing_node",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Dofamin1/DISTRIBUTED_PROCESSING_NODE.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Dofamin1/DISTRIBUTED_PROCESSING_NODE/issues"
+  },
+  "homepage": "https://github.com/Dofamin1/DISTRIBUTED_PROCESSING_NODE#readme",
+  "dependencies": {
+    "cote": "^1.0.0",
+    "joi": "^14.3.1"
+  }
+}
