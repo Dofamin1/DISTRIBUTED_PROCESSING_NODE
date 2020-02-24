@@ -12,17 +12,22 @@ class LocalState {
     this.isMaster = isMaster;
   }
 
+  //TODO: put this part to queue controller
   putToQueueBeginning(task) {
     this._validateTaskSchema(task);
     this.tasksQueue.unshift(task);
   }
 
   popFromQueue() {
+    if (!this.tasksQueue.length) {
+      console.log("the queue is empty");
+      return null;
+    }
     return this.tasksQueue.pop();
   }
 
   _validateTaskSchema(task) {
-    //TODO: validate task schema with Joi libruary
+    // validate task schema with Joi libruary
   }
 }
 
