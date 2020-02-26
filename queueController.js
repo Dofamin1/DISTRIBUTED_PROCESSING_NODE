@@ -10,7 +10,6 @@ class QueueController {
     if(err) errorHandler(err);
     this._validateTaskSchema(task);
     this.tasksQueue.unshift(task);
-    console.log(this.tasksQueue)
   }
 
   popFromQueue() {

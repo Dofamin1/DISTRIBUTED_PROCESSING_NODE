@@ -5,21 +5,22 @@ const { errorHandler } = require('./helpers')
 const masterBusinessLogic = require("./businessLogic/master");
 const workerBusinessLogic = require("./businessLogic/worker");
 const QueueController = require('./queueController');
-const orchestratorListener = new cote.Responder({ name: 'Orchestrator Listener' });
+const orchestratorResponder = new cote.Responder({ name: 'Orchestrator Responder' });
+const orchestratorSubscriber = new cote.Subscriber({ name: 'Orchestrantor Subscriber', subscribesTo: ['task'] })
 
 const { FIRST_START_NODE_STASTUS } = process.env
 
 class Worker {
-  constructor(orchestratorListener) {
-    this.orchestratorListener = orchestratorListener;
+  constructor(orchestratorResponder, ) {
+    this.orchestratorResponder = orchestratorResponder;
     this.eventsController = new WorkerEventsController();
     this.businessLogic = workerBusinessLogic;
-    this._setOrchestratorListeners();
+    this._setOrchestratorResponders();
     this._setMasterListeners();
   }
 
-  _setOrchestratorListeners() {
-    this.orchestratorListener.on('amIAlive', (err, responseCallback) => {
+  _setOrchestratorResponders() {
+    this.orchestratorResponder.on('amIAlive', (err, responseCallback) => {
       errorHandler(err);
       responseCallback('i am alive')
     })
@@ -37,31 +38,36 @@ class Worker {
 }
 
 class Master {
-  constructor(orchestratorListener) {
-    this.orchestratorListener = orchestratorListener;
+  constructor(orchestratorResponder, orchestratorSubscriber) {
+    this.orchestratorResponder = orchestratorResponder;
+    this.orchestratorSubscriber = orchestratorSubscriber;
     this.eventsController = new MasterEventsController();
     this.businessLogic = masterBusinessLogic;
-    this.queueController = new QueueController()
-    this._setOrchestratorListeners();
+    this.queueController = QueueController;
+    this._setOrchestratorResponders();
+    this._setOrchestratorSubscribers();
   }
 
-  _setOrchestratorListeners() {
-    this.orchestratorListener.on('task', this.queueController.addToQueue);
-    this.orchestratorListener.on('amIAlive', (err, responseCallback) => {
+  _setOrchestratorResponders() {
+    this.orchestratorResponder.on('amIAlive', (err, responseCallback) => {
       errorHandler(err);
       responseCallback('i am alive')
     })
   }
 
+  _setOrchestratorSubscribers() {
+    this.orchestratorSubscriber.on('task', this.queueController.addToQueue);
+  }
+
 }
 
-orchestratorListener.on("nodeStatus", (status, err) => {
-  // node = status == "master" ? new Master() : 
+orchestratorSubscriber.on("nodeStatus", (err, status) => {
+  errorHandler(err);
   if(status == 'master') {
-    node = new Master(orchestratorListener);
+    node = new Master(orchestratorResponder, orchestratorSubscriber );
   }else {
-    node = new Worker(orchestratorListener);
+    node = new Worker(orchestratorResponder);
   }
 });
 
-let node = FIRST_START_NODE_STASTUS == 'master' ? new Master(orchestratorListener) : new Worker(orchestratorListener); 
+let node = FIRST_START_NODE_STASTUS == 'master' ? new Master(orchestratorResponder, orchestratorSubscriber) : new Worker(orchestratorResponder); 
