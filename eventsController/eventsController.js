@@ -6,17 +6,16 @@ class EventsController {
     this.requester = new cote.Requester({ name: `${name} Requester` });
   }
 
-  sendEvent({ eventName, callback }) {
-    //callback receive some result
-    this.requester.send({ type: eventName }, response => {
+  sendEvent({ type, value }, callback) {
+    this.requester.send({ type, value }, response => {
       callback(response);
     });
   }
 
   subscribeToEvent({ eventName, callback }) {
     //callback returns some result
-    this.responder.on(eventName, (req, response) => {
-      response(callback);
+    this.responder.on(eventName, (req, sendResponse) => {
+      sendResponse(null, callback(req.value));
     });
   }
 }
