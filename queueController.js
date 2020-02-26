@@ -1,20 +1,19 @@
 const Joi = require("joi");
-const  { errorHandler } = require('./helpers')
+const  { errorHandler, log } = require('./helpers')
 class QueueController {
   constructor() {
     this.tasksQueue = [];
   }
 
-  //TODO: put this part to queue controller
-  addToQueue(err, task) {
-    if(err) errorHandler(err);
+  addToQueue(task) {
     this._validateTaskSchema(task);
     this.tasksQueue.unshift(task);
+    log('TASK WAS ADDED TO QUEUE')
   }
 
   popFromQueue() {
     if (!this.tasksQueue.length) {
-      console.log("the queue is empty");
+      log("ATTENTION: the queue is empty")
       return null;
     }
     return this.tasksQueue.pop();

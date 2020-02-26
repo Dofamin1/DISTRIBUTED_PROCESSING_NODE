@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start_master": "FIRST_START_NODE_STASTUS=master node ./index.js"
+    "start_master_dev": "LOGGER=true FIRST_START_NODE_STASTUS=master node ./index.js"
   },
   "repository": {
     "type": "git",
