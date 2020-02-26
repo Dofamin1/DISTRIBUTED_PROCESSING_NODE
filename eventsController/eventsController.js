@@ -13,7 +13,7 @@ class EventsController {
     });
   }
 
-  subscribeToEvents({ eventName, callback }) {
+  subscribeToEvent({ eventName, callback }) {
     //callback returns some result
     this.responder.on(eventName, (req, response) => {
       response(callback);

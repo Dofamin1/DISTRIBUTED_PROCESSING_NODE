@@ -1,11 +1,13 @@
 const Joi = require("joi");
-class LocalState {
+const  { errorHandler } = require('./helpers')
+class QueueController {
   constructor() {
     this.tasksQueue = [];
   }
 
   //TODO: put this part to queue controller
-  addToQueue(task) {
+  addToQueue(err, task) {
+    if(err) errorHandler(err);
     this._validateTaskSchema(task);
     this.tasksQueue.unshift(task);
   }
@@ -21,6 +23,7 @@ class LocalState {
   _validateTaskSchema(task) {
     // validate task schema with Joi libruary
   }
+ 
 }
 
-module.exports = new LocalState();
+module.exports = new QueueController();
