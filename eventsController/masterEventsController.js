@@ -1,4 +1,4 @@
-const { EventsController } = require("./eventsController");
+const  EventsController  = require("./eventsController");
 
 class MasterEventsController extends EventsController {
   constructor() {

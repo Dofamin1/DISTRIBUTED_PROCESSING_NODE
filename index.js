@@ -2,8 +2,8 @@ const cote = require("cote");
 const WorkerEventsController = require("./eventsController/workerEventsController");
 const MasterEventsController = require("./eventsController/masterEventsController");
 const { errorHandler } = require('./helpers')
-const masterBusinessLogic = require("businessLogic/master");
-const workerBusinessLogic = require("businessLogic/worker");
+const masterBusinessLogic = require("./businessLogic/master");
+const workerBusinessLogic = require("./businessLogic/worker");
 const QueueController = require('./queueController');
 const orchestratorListener = new cote.Responder({ name: 'Orchestrator Listener' });
 
@@ -52,7 +52,7 @@ class Master {
       responseCallback('i am alive')
     })
   }
-   
+
 }
 
 orchestratorListener.on("nodeStatus", (status, err) => {
@@ -60,8 +60,8 @@ orchestratorListener.on("nodeStatus", (status, err) => {
   if(status == 'master') {
     node = new Master(orchestratorListener);
   }else {
-    node = new Worker();
+    node = new Worker(orchestratorListener);
   }
 });
 
-let node = FIRST_START_NODE_STASTUS == 'master' ? new Master() : new Worker(); 
+let node = FIRST_START_NODE_STASTUS == 'master' ? new Master(orchestratorListener) : new Worker(orchestratorListener); 
