@@ -6,26 +6,17 @@ const masterBusinessLogic = require("./businessLogic/master");
 const workerBusinessLogic = require("./businessLogic/worker");
 const QueueController = require('./queueController');
 const orchestratorResponder = new cote.Responder({ name: 'Orchestrator Responder' });
-const orchestratorSubscriber = new cote.Subscriber({ name: 'Orchestrantor Subscriber', subscribesTo: ['task'] })
 
 const { FIRST_START_NODE_STASTUS } = process.env
 
 class Worker {
-  constructor(orchestratorResponder, ) {
-    this.orchestratorResponder = orchestratorResponder;
+  constructor() {
     this.eventsController = new WorkerEventsController();
     this.businessLogic = workerBusinessLogic;
-    this._setOrchestratorResponders();
-    this._setMasterListeners();
+    this._setMasterResponders();
   }
 
-  _setOrchestratorResponders() {
-    this.orchestratorResponder.on('amIAlive', (err, responseCallback) => {
-      errorHandler(err);
-      responseCallback('i am alive')
-    })
-  } 
-  _setMasterListeners() {
+  _setMasterResponders() {
     const events = [{
       eventName: 'task',
       callback: this.businessLogic.executeTask
@@ -38,36 +29,33 @@ class Worker {
 }
 
 class Master {
-  constructor(orchestratorResponder, orchestratorSubscriber) {
-    this.orchestratorResponder = orchestratorResponder;
-    this.orchestratorSubscriber = orchestratorSubscriber;
+  constructor() {
+    this.orchestratorSubscriber = new cote.Subscriber({ name: 'Master Orchestrantor Subscriber', subscribesTo: ['task'] });
     this.eventsController = new MasterEventsController();
     this.businessLogic = masterBusinessLogic;
     this.queueController = QueueController;
-    this._setOrchestratorResponders();
     this._setOrchestratorSubscribers();
   }
 
-  _setOrchestratorResponders() {
-    this.orchestratorResponder.on('amIAlive', (err, responseCallback) => {
-      errorHandler(err);
-      responseCallback('i am alive')
-    })
-  }
-
   _setOrchestratorSubscribers() {
-    this.orchestratorSubscriber.on('task', this.queueController.addToQueue);
+    this.orchestratorSubscriber.on('task', this.queueController.addToQueue.bind(this.queueController));
   }
 
 }
 
-orchestratorSubscriber.on("nodeStatus", (err, status) => {
-  errorHandler(err);
-  if(status == 'master') {
-    node = new Master(orchestratorResponder, orchestratorSubscriber );
-  }else {
-    node = new Worker(orchestratorResponder);
-  }
-});
+//TODO: this message should be recived by specified node, not  by all nodes
+// orchestratorResponder.on("nodeStatus", (err, responseCallback) => {
+//   errorHandler(err);
+//   if(status == 'master') {
+//     node = new Master(orchestratorResponder );
+//   } else {
+//     node = new Worker(orchestratorResponder);
+//   }
+// });
 
-let node = FIRST_START_NODE_STASTUS == 'master' ? new Master(orchestratorResponder, orchestratorSubscriber) : new Worker(orchestratorResponder); 
+orchestratorResponder.on('amIAlive', (err, responseCallback) => {
+  errorHandler(err);
+  responseCallback('i am alive')
+})
+
+let node = FIRST_START_NODE_STASTUS == 'master' ? new Master(orchestratorResponder) : new Worker(orchestratorResponder); 
