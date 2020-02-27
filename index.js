@@ -1,13 +1,13 @@
-import { v4 as uuidv4 } from "uuid";
+const uuid = require("uuid");
 const cote = require("cote");
 const WorkerEventsController = require("./eventsController/workerEventsController");
 const MasterEventsController = require("./eventsController/masterEventsController");
-const { errorHandler } = require("./helpers");
+const { errorHandler, log } = require("./helpers");
 const MasterBusinessLogic = require("./businessLogic/master");
 const WorkerBusinessLogic = require("./businessLogic/worker");
 const QueueController = require("./queueController");
 const orchestratorResponder = new cote.Responder({
-  name: "Orchestrator Responder"
+  name: "Orchestrator Responder",
 });
 
 const { FIRST_START_NODE_STASTUS } = process.env;
@@ -19,8 +19,8 @@ class BaseNode {
   }
 
   _generateUuid() {
-    if (this.uuid) {
-      this.uuid = uuidv4();
+    if (!this.uuid) {
+      this.uuid = uuid.v4();
     }
   }
 }
@@ -93,7 +93,7 @@ orchestratorResponder.on("nodeStatus", (req, responseCallback) => {
   }
 });
 
-orchestratorResponder.on("amIAlive", (req, responseCallback) => {
+orchestratorResponder.on("checkIfAlive", (req, responseCallback) => {
   responseCallback({
     role: node instanceof Master ? "master" : "worker",
     uuid: node.uuid
