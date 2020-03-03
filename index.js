@@ -7,10 +7,10 @@ const MasterBusinessLogic = require("./businessLogic/master");
 const WorkerBusinessLogic = require("./businessLogic/worker");
 const QueueController = require("./queueController");
 const orchestratorResponder = new cote.Responder({
-  name: "Orchestrator Responder",
+  name: "Orchestrator Responder"
 });
 
-const { FIRST_START_NODE_STASTUS } = process.env;
+const { FIRST_START_NODE_STATUS } = process.env;
 
 class BaseNode {
   constructor() {
@@ -69,7 +69,7 @@ class Master extends BaseNode {
 }
 
 let node =
-  FIRST_START_NODE_STASTUS == "master"
+  FIRST_START_NODE_STATUS == "master"
     ? new Master(orchestratorResponder)
     : new Worker(orchestratorResponder);
 
