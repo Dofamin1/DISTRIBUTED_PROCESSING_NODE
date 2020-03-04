@@ -2,7 +2,7 @@ class MasterBusinessLogic {
   constructor() {
 
   }
-  saveTaskResult(){
+  saveTaskResult(res){
     console.log("hello i am responsible for saving tasks results");
   }
 }
