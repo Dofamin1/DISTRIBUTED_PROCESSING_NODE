@@ -5,6 +5,8 @@ const { errorHandler, log } = require("./helpers");
 const MasterBusinessLogic = require("./businessLogic/master");
 const WorkerBusinessLogic = require("./businessLogic/worker");
 const QueueController = require("./queueController");
+const Redis = require('ioredis');
+const RedisDbClient = require('db/redisDbClient');
 const orchestratorResponder = new cote.Responder({
   name: "Orchestrator Responder"
 });
@@ -15,7 +17,7 @@ const { FIRST_START_NODE_STATUS, UUID } = process.env;
 class Worker {
   constructor({ UUID, BusinessLogic, EventsController }) {
     this.uuid = UUID;
-    this.eventsController = new EventsController();
+    this.eventsController = new EventsController('Worker');
     this.businessLogic = new BusinessLogic();
     this._setMasterResponders();
   }
@@ -23,7 +25,7 @@ class Worker {
   _setMasterResponders() {
     const events = [
       {
-        eventName: "task",
+        eventName: `${this.uuid}_task`,
         callback: this.businessLogic.executeTask
       }
     ];
@@ -35,19 +37,48 @@ class Worker {
 }
 
 class Master  {
-  constructor({ UUID, BusinessLogic, EventsController }) {
+  constructor({ UUID, BusinessLogic, EventsController, dbClient }) {
     this.uuid = UUID;
-    this.eventsController = new EventsController();
+    
+    this.freeWorkersUUIDs = []; 
+    this.allWorkersUUIDs = []; 
+
+    this.dbClient = dbClient;
+    this.eventsController = new EventsController("Master");
     this.businessLogic = new BusinessLogic();
     this.queueController = new QueueController();
+
+    //TODO: save workers uuid to this.allWorkersUUIDs
+    this._sendTasks()
   }
+
+  async _sendTasks () {
+
+    while(this.freeWorkers.length) {
+      const workerUUID = this.freeWorkersUUIDs.pop();
+      const task = await this.queueController.popFromQueue();
+
+      this.eventsController.sendTask({ type: `${workerUUID}_task`, value: task }, (result) => {
+        this.freeWorkersUUIDs.push(workerUUID);
+
+        this.businessLogic.saveTaskResult(result);
+
+        this._sendTasks();
+      })
+        
+    }
+  }
+
+
+
 }
 
 
 const masterParams = {
   UUID,
   BusinessLogic: MasterBusinessLogic,
-  EventsController: MasterEventsController
+  EventsController: MasterEventsController,
+  dbClient: new RedisDbClient(new Redis())
 }
 const workerParams = {
   UUID,
