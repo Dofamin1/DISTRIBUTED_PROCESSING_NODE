@@ -25,4 +25,4 @@ class QueueController {
  
 }
 
-module.exports = new QueueController();
+module.exports = QueueController();
