@@ -5,5 +5,4 @@ class WorkerEventsController extends EventsController {
     super("Worker Node");
   }
 }
-
 module.exports = WorkerEventsController;

@@ -1,12 +1,11 @@
 class WorkerBusinessLogic {
-  constructor() {
-
-  }
-  executeTask() {
+  executeTask(task) {
     console.log("hello i am task executor");
-
-    return { result: 'ok' }
+    if (!task.execute instanceof Function) {
+      throw new Error("Method execute is not implemented");
+    }
+    return { result: eval('(' + task + ')') }
   }
 }
 
-module.exports = WorkerBusinessLogic
+module.exports = WorkerBusinessLogic;
