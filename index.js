@@ -63,7 +63,9 @@ class Master  {
 
         this.businessLogic.saveTaskResult(result);
 
-        this._sendTasks();
+        if(!this.freeWorkers.length) {
+          this._sendTasks();
+        }
       })
         
     }
