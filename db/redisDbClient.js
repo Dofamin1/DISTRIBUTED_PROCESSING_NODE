@@ -1,4 +1,3 @@
-
 const serialize = require('serialize-javascript');
 
 const STACK_NAME = 'stack';
@@ -8,8 +7,14 @@ class RedisDbClient {
         this.client = client;
     }
 
-    async nextTask(task) {
-        return this.client.lpop(STACK_NAME);
+    async fetchTasks(size) {
+        const result = [];
+        for (let i = 0; i < size; i++) {
+            const task = this.client.lpop(STACK_NAME);
+            if (task === null) break;
+            result.push(task);
+        }
+        return result;
     }
 
     async pushTask(task) {

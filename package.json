@@ -20,6 +20,8 @@
   "homepage": "https://github.com/Dofamin1/DISTRIBUTED_PROCESSING_NODE#readme",
   "dependencies": {
     "cote": "^1.0.0",
-    "joi": "^14.3.1"
+    "ioredis": "^4.16.0",
+    "joi": "^14.3.1",
+    "serialize-javascript": "^3.0.0"
   }
 }

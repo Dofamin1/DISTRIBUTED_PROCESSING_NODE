@@ -5,5 +5,4 @@ class MasterEventsController extends EventsController {
     super("Master Node");
   }
 }
-
 module.exports = MasterEventsController;
