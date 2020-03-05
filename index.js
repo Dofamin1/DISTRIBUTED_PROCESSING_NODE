@@ -46,7 +46,7 @@ class Master  {
     this.dbClient = dbClient;
     this.eventsController = new EventsController("Master");
     this.businessLogic = new BusinessLogic();
-    this.queueController = new QueueController();
+    this.queueController = new QueueController(this.dbClient);
 
     //TODO: save workers uuid to this.allWorkersUUIDs
     this._sendTasks()
