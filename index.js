@@ -63,6 +63,7 @@ class Master {
             const workerUUID = this.freeWorkersUUIDs.pop();
             const task = await this.queueController.popFromQueue();
 
+            log(`Send task to the ${workerUUID}`);
             this.eventsController.sendTask({type: `${workerUUID}_task`, value: task}, result => {
                 this.freeWorkersUUIDs.push(workerUUID);
                 this.businessLogic.saveTaskResult(result);
@@ -99,7 +100,8 @@ let node = FIRST_START_NODE_STATUS === "master" ?
 const orchestratorResponder = new cote.Responder({
     name: "Orchestrator Responder"
 });
-orchestratorResponder.on("status", (req, responseCallback) => {
+orchestratorResponder.on(`status_${UUID}`, (req, responseCallback) => {
+    log(`Send status`);
     responseCallback({
         role: node instanceof Master ? "master" : "worker",
         uuid: node.uuid
