@@ -1,128 +1,144 @@
-const cote = require("cote");
-const WorkerEventsController = require("./eventsController/workerEventsController");
-const MasterEventsController = require("./eventsController/masterEventsController");
 const {errorHandler, log} = require("./helpers");
 const MasterBusinessLogic = require("./businessLogic/master");
 const WorkerBusinessLogic = require("./businessLogic/worker");
-const QueueController = require("./queueController");
 const Redis = require('ioredis');
 const RedisDbClient = require('./db/redisDbClient');
 const {FIRST_START_NODE_STATUS, UUID} = process.env;
-log(`Params: ${process.env}`);
 
-class Worker {
-    constructor({UUID, BusinessLogic, EventsController}) {
-        this.uuid = UUID;
-        this.eventsController = new EventsController();
-        this.businessLogic = new BusinessLogic();
-        this._initEvents();
-    }
+const DEFAULT_TIMEOUT = 1000;
 
-    _initEvents() {
-        const WORKER_EVENTS = [
-            {
-                eventName: `${this.uuid}_task`,
-                callback: this.businessLogic.executeTask
-            }
-        ];
-        WORKER_EVENTS.forEach(({eventName, callback}) => {
-            this.eventsController.subscribeToEvent({eventName, callback});
-        });
-    }
+class Node {
+  constructor({UUID, businessLogic, dbClient}) {
+    this.uuid = UUID;
+    this.businessLogic = businessLogic;
+    this.dbClient = dbClient;
+    this.isAlive = true;
+  }
+
+  async work() {
+    throw new Error("Is not implemented")
+  }
+
+  shutdown() {
+    this.isAlive = false;
+  }
 }
 
-class Master {
-    constructor({UUID, BusinessLogic, EventsController, dbClient}) {
-        this.uuid = UUID;
+class Worker extends Node {
+  constructor({UUID, businessLogic, dbClient, timeout}) {
+    super({UUID, businessLogic, dbClient});
+    this.timeout = timeout;
+  }
 
-        this.freeWorkersUUIDs = [];
-        this.allWorkersUUIDs = [];
-
-        this.eventsController = new EventsController();
-        this.businessLogic = new BusinessLogic();
-        this.queueController = new QueueController(dbClient);
-        this._initEvents();
+  async work() {
+    if (!this.isAlive) return Promise.resolve();
+    const task = await this.dbClient.fetchTask();
+    const nextWork = () => this.work();
+    if (task) {
+      const {UUID, result} = this.businessLogic.accept(task);
+      await this.dbClient.pushResult({UUID, result});
+      return nextWork();
+    } else {
+      return new Promise(resolve => {
+        setTimeout(
+          () => nextWork.then(() => resolve()),
+          this.timeout
+        )
+      })
     }
+  }
+}
 
-    _initEvents() {
-        const MASTER_EVENTS = [
-            {
-                eventName: `nodes_list`,
-                callback: list => {
-                    this.freeWorkersUUIDs = this.freeWorkersUUIDs
-                        .filter(uuid => list.includes(uuid));
-                }
-            }
-        ];
-        MASTER_EVENTS.forEach(({eventName, callback}) => {
-            this.eventsController.subscribeToEvent({eventName, callback});
-        });
-    }
+class Master extends Node {
+  constructor({UUID, businessLogic, dbClient, timeout, taskSupplier}) {
+    super({UUID, businessLogic, dbClient});
+    this.taskSupplier = taskSupplier;
+    this.timeout = timeout;
+  }
 
-    async _sendTasks() {
-        while (this.freeWorkersUUIDs.length) {
-            const workerUUID = this.freeWorkersUUIDs.pop();
-            const task = await this.queueController.popFromQueue();
-
-            log(`Send task to the ${workerUUID}`);
-            this.eventsController.sendTask({type: `${workerUUID}_task`, value: task}, result => {
-                this.freeWorkersUUIDs.push(workerUUID);
-                this.businessLogic.saveTaskResult(result);
-                if (!this.freeWorkersUUIDs.length) {
-                    this._sendTasks();
-                }
-            });
+  async work() {
+    return new Promise(resolve => {
+      const work = async () => {
+        const tasks = this.taskSupplier();
+        for (const task of tasks) {
+          await this.dbClient.pushTask(task);
         }
-    }
-
-    withPostInit() {
-        this._sendTasks();
-        return this;
-    }
+      };
+      if (this.isAlive) {
+        setTimeout(work, this.timeout);
+      } else {
+        resolve();
+      }
+    });
+  }
 }
 
-const MASTER_PARAMS = {
-    UUID,
-    BusinessLogic: MasterBusinessLogic,
-    EventsController: MasterEventsController,
-    dbClient: new RedisDbClient(new Redis())
-};
+class Nodes {
+  static ofMasterNode({UUID, dbClient, timeout = DEFAULT_TIMEOUT, taskSupplier}) {
+    const businessLogic = new MasterBusinessLogic();
+    return new Master({UUID, businessLogic, dbClient, taskSupplier});
+  }
 
+  static ofWorkerNode({UUID, dbClient, timeout = DEFAULT_TIMEOUT}) {
+    const businessLogic = new WorkerBusinessLogic();
+    return new Worker({UUID, businessLogic, dbClient});
+  }
+}
+
+class OrchestratorClient {
+  constructor(initialNode, client) {
+    this.currentNode = initialNode;
+    this.client = client;
+  }
+
+  startResponding(interval) {
+    const signal = () => this.client.sentIsAlive(UUID);
+    setInterval(signal, interval)
+  }
+
+  withDynamicChangeRole(interval) {
+    const monitoring = () => this.client.whoAmI()
+      .then(res => {
+        const role = res.role;
+        if (this.currentNode.prototype.name.toLowerCase() !== role) {
+          this.currentNode.shutdown();
+          switch (role) {
+            case Master.name.toLowerCase():
+              this.currentNode = Nodes.ofMasterNode(MASTER_PARAMS);
+              this.currentNode.work();
+              break;
+            case Worker.name.toLowerCase():
+              this.currentNode = Nodes.ofWorkerNode(WORKER_PARAMS);
+              this.currentNode.work();
+              break;
+          }
+        }
+      });
+    setInterval(monitoring, interval);
+    return this;
+  }
+}
+
+const webSocketClient = null;
 const WORKER_PARAMS = {
-    UUID,
-    BusinessLogic: WorkerBusinessLogic,
-    EventsController: WorkerEventsController
+  UUID,
+  dbClient: new RedisDbClient(new Redis())
+};
+const MASTER_PARAMS = {
+  UUID,
+  dbClient: new RedisDbClient(new Redis()),
+  taskSupplier: () => webSocketClient.reciveTasks()
 };
 
-let node = FIRST_START_NODE_STATUS === "master" ?
-    new Master(MASTER_PARAMS).withPostInit() :
-    new Worker(WORKER_PARAMS);
 
-const orchestratorResponder = new cote.Responder({
-    name: "Orchestrator Responder"
-});
-orchestratorResponder.on(`status_${UUID}`, (req, responseCallback) => {
-    log(`Send status`);
-    responseCallback({
-        role: node instanceof Master ? "master" : "worker",
-        uuid: node.uuid
-    });
-});
+const interval = 1000;
+const node = FIRST_START_NODE_STATUS === "master" ?
+  Nodes.ofMasterNode(MASTER_PARAMS) :
+  Nodes.ofWorkerNode(WORKER_PARAMS);
 
+const orchestratorClient = new OrchestratorClient(node, webSocketClient)
+  .withDynamicChangeRole(interval);
 
-// TODO
-// orchestratorResponder.on("nodeStatus", (req, responseCallback) => {
-//   try {
-//     errorHandler(err);
-//
-//     node = req.value === "master" ? new Master(masterParams) : new Worker(workerParams);
-//
-//     responseCallback({
-//       uuid: node.uuid
-//     });
-//   } catch (err) {
-//     responseCallback({
-//       error: `Error happen while trying to set node ${node.uuid} master role`
-//     });
-//   }
-// });
+orchestratorClient.startResponding();
+node.work();
+

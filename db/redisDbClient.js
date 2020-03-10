@@ -7,14 +7,8 @@ class RedisDbClient {
         this.client = client;
     }
 
-    async fetchTasks(size) {
-        const result = [];
-        for (let i = 0; i < size; i++) {
-            const task = this.client.lpop(STACK_NAME);
-            if (task === null) break;
-            result.push(task);
-        }
-        return result;
+    async fetchTask() {
+        return this.client.lpop(STACK_NAME);
     }
 
     async pushTask(task) {
