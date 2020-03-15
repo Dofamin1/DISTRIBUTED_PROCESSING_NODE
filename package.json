@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start_master_dev": "COTE_DISCOVERY_REDIS=true LOGGER=true FIRST_START_NODE_STATUS=master UUID=master node ./index.js",
-    "start_node_dev": "COTE_DISCOVERY_REDIS=true LOGGER=true FIRST_START_NODE_STATUS=worker UUID=worker node ./index.js"
+    "start_master_dev": "LOGGER=true FIRST_START_NODE_STATUS=master UUID=master WS_HOST=ws://localhost:8080 node ./index.js",
+    "start_node_dev": "LOGGER=true FIRST_START_NODE_STATUS=worker UUID=worker WS_HOST=ws://localhost:8080 node ./index.js"
   },
   "repository": {
     "type": "git",
@@ -22,6 +22,7 @@
     "ioredis": "^4.16.0",
     "joi": "^14.3.1",
     "serialize-javascript": "^3.0.0",
+    "uuid": "^7.0.2",
     "ws": "^7.2.3"
   }
 }

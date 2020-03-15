@@ -17,6 +17,10 @@ class RedisDbClient {
         }
         return this.client.lpush(STACK_NAME, serialize(task));
     }
+
+    async pushResult({UUID, result}) {
+        return this.client.set(`${UUID}_result`, result);
+    }
 }
 
 module.exports = RedisDbClient;
