@@ -39,6 +39,7 @@ class Worker extends Node {
     const nextWork = () => this.work();
     if (task) {
       const {UUID, result} = this.businessLogic.accept(task);
+      log(`Task UUID${UUID} has been solved with result: ${result}`);
       await this.dbClient.pushResult({UUID, result});
       return nextWork();
     } else {
@@ -63,9 +64,12 @@ class Master extends Node {
     return new Promise(resolve => {
       const workNext = async () => {
         const tasks = await this.taskSupplier();
-        for (const task of tasks) {
-          await this.dbClient.pushTask(task);
+        console.log(`Push ${tasks.length} tasks`);
+        for (let task of tasks) {
+          const processedTask = this.businessLogic.accept(task);
+          await this.dbClient.pushTask(processedTask);
         }
+        log(`Tasks ${tasks.length} has been sent`);
       };
       if (this.isAlive) {
         setInterval(workNext, this.timeout);
@@ -144,15 +148,18 @@ const WORKER_PARAMS = {
 const MASTER_PARAMS = {
   UUID,
   dbClient: redisDbClient,
-  taskSupplier: () => [].fill({
-    UUID: generateUUID(),
-    execute() {
-      function fib(n) {
-        return n <= 1 ? n : fib(n - 1) + fib(n - 2);
+  taskSupplier: () => {
+    const size = Math.random() * 10 | 0;
+    return new Array(size).fill({
+      UUID: generateUUID(),
+      _fib(n) {
+        return n <= 1 ? n : this._fib(n - 1) + this._fib(n - 2);
+      },
+      execute() {
+        return this._fib((Math.random() * 50) | 0);
       }
-      return fib((Math.random() * 50) | 0);
-    }
-  }, 0, 1000)};
+    });
+  }};
 
 const INTERVAL = 1000;
 const node = FIRST_START_NODE_STATUS === "master" ?

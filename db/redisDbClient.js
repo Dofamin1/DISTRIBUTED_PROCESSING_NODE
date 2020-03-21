@@ -1,5 +1,3 @@
-const serialize = require('serialize-javascript');
-
 const STACK_NAME = 'stack';
 class RedisDbClient {
     constructor(client) {
@@ -11,10 +9,7 @@ class RedisDbClient {
     }
 
     async pushTask(task) {
-        if (!task.execute instanceof Function) {
-            throw new Error("Method execute is not implemented");
-        }
-        return this.client.lpush(STACK_NAME, serialize(task));
+        return this.client.lpush(STACK_NAME, task);
     }
 
     async pushResult({UUID, result}) {

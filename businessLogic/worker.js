@@ -1,5 +1,6 @@
 class WorkerBusinessLogic {
   accept(task) {
+    console.log(`Accept task: ${task}`);
     const executableObject = eval('(' + task + ')');
     if (this._isFunction(task) && this._hasRequiredFields(executableObject)) {
       throw new Error("Object is inappropriate");
