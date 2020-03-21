@@ -1,10 +1,11 @@
 const {errorHandler, log, generateUUID} = require("./helpers");
 const MasterBusinessLogic = require("./businessLogic/master");
 const WorkerBusinessLogic = require("./businessLogic/worker");
-const Redis = require('ioredis');
-const RedisDbClient = require('./db/redisDbClient');
-const {FIRST_START_NODE_STATUS, UUID} = process.env;
 const {WebSocketClient} = require('./websocketClient');
+const RedisDbClient = require('./db/redisDbClient');
+const Redis = require('ioredis');
+
+const {FIRST_START_NODE_STATUS, UUID} = process.env;
 const DEFAULT_TIMEOUT = 1000;
 
 console.dir(process.env);
@@ -135,17 +136,21 @@ class OrchestratorClient {
 }
 
 const client = new WebSocketClient();
+const redisDbClient = new RedisDbClient(new Redis());
 const WORKER_PARAMS = {
   UUID,
-  dbClient: new RedisDbClient(new Redis())
+  dbClient: redisDbClient
 };
 const MASTER_PARAMS = {
   UUID,
-  dbClient: new RedisDbClient(new Redis()),
+  dbClient: redisDbClient,
   taskSupplier: () => [].fill({
     UUID: generateUUID(),
     execute() {
-      return Math.log(Math.random());
+      function fib(n) {
+        return n <= 1 ? n : fib(n - 1) + fib(n - 2);
+      }
+      return fib((Math.random() * 50) | 0);
     }
   }, 0, 1000)};
 
